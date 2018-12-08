@@ -11,7 +11,12 @@ type Event struct {
 	ReleaseName         string
 	ReleaseURL          string
 	ProjectID           string
+	ProjectName         string
+	ProjectURL          string
+	ServerURL           string
+	CollectionURL       string
 	Status              string
+	ApprovalType        string
 	SubscriptionID      string
 	NotificationID      int
 	PublisherID         string

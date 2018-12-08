@@ -1,9 +1,7 @@
 package scribe
 
 import (
-	"fmt"
 	"hash/fnv"
-	"log"
 	"strconv"
 	"strings"
 
@@ -12,14 +10,14 @@ import (
 )
 
 // Parser func
-func Parser(b []byte) *vss.Event {
+func Parser(b []byte) (*vss.Event, error) {
 
 	var p fastjson.Parser
 	var re vss.Event
 
 	v, err := p.Parse(string(b))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	re.SubscriptionID = string(v.GetStringBytes("subscriptionId"))
@@ -32,6 +30,10 @@ func Parser(b []byte) *vss.Event {
 	re.ResourceVersion = string(v.GetStringBytes("resourceVersion"))
 	re.Timestamp = string(v.GetStringBytes("createdDate"))
 	re.ProjectID = string(v.Get("resource").Get("project").GetStringBytes("id"))
+	re.ProjectName = string(v.Get("resource").Get("project").GetStringBytes("name"))
+	re.ProjectURL = string(v.Get("resourceContainers").Get("project").GetStringBytes("baseUrl"))
+	re.ServerURL = string(v.Get("resourceContainers").Get("server").GetStringBytes("baseUrl"))
+	re.CollectionURL = string(v.Get("resourceContainers").Get("collection").GetStringBytes("baseUrl"))
 
 	if strings.Compare(re.ProjectID, "00000000-0000-0000-0000-000000000000") == 0 {
 
@@ -42,6 +44,7 @@ func Parser(b []byte) *vss.Event {
 		re.Status = string(v.Get("resource").Get("environment").GetStringBytes("status"))
 
 	} else {
+
 		switch et := re.EventType; et {
 		case "ms.vss-release.deployment-started-event", "ms.vss-release.deployment-completed-event":
 
@@ -62,6 +65,7 @@ func Parser(b []byte) *vss.Event {
 					re.ReleaseName = string(k.Get("release").GetStringBytes("name"))
 					re.ReleaseURL = string(k.Get("release").GetStringBytes("url"))
 					re.Status = string(k.GetStringBytes("status"))
+					re.ApprovalType = string(v.Get("resource").Get("approval").GetStringBytes("approvalType"))
 
 					break
 				}
@@ -73,9 +77,7 @@ func Parser(b []byte) *vss.Event {
 
 	re.ReleaseTrackingCode = hash(strings.Join([]string{strconv.Itoa(re.EnvironmentID), re.ProjectID}, "-"))
 
-	fmt.Printf("%+v\n", re)
-
-	return &re
+	return &re, nil
 }
 
 func hash(s string) uint32 {
